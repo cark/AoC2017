@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 
+// There must be a mathy way to do this, but i sure am too dumb for that.
+// So brute force it is ! weeee...
+
 fn main() {
     let setup_time = std::time::Instant::now();
     let part1 = part1(277678);
@@ -13,9 +16,6 @@ fn main() {
 
 type Coord = (i32, i32);
 const DIRS: [Coord; 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
-
-// There must be a mathy way to do this, but i sure am too dumb for that.
-// So brute force it is ! weeee...
 
 /// produces an iterator that successively returns 1, 1, 2, 2, 3, 3, 4, 4, 5, 5 ...
 fn repeated_naturals() -> impl Iterator<Item = usize> {
