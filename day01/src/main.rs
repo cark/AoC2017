@@ -21,13 +21,12 @@ fn part2(data: &str) -> u64 {
 
 fn solve(data: &str, offset: usize) -> u64 {
     let data = data.as_bytes();
-    let mut result = 0;
-    for (i, &value) in data.iter().enumerate() {
-        if value == data[(i + offset) % data.len()] {
-            result += (value - b'0') as u64
-        }
-    }
-    result
+    data.iter()
+        .enumerate()
+        .filter_map(|(i, &value)| {
+            (value == data[(i + offset) % data.len()]).then(|| (value - b'0') as u64)
+        })
+        .sum()
 }
 
 #[cfg(test)]
