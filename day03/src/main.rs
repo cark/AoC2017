@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 // There must be a mathy way to do this, but i sure am too dumb for that.
 // So brute force it is ! weeee...
+// it's O(n) anyways
 
 fn main() {
     let setup_time = std::time::Instant::now();
@@ -64,6 +65,7 @@ fn coords_around(coord: Coord) -> impl Iterator<Item = Coord> {
 }
 
 fn part2(input: i32) -> i32 {
+    // allocations in here, BOOOOH !
     let mut hm = HashMap::new();
     hm.insert((0, 0), 1);
     // we just added the first iteration, so skip it
