@@ -11,52 +11,42 @@ fn main() {
     println!("Part2 : {} in {} µs", part2, part2_dur);
 }
 
-const DIRS: [(i32, i32); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+type Coord = (i32, i32);
+const DIRS: [Coord; 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
 
-/// produces a closure that successively returns 1, 1, 2, 2, 3, 3 ...
-fn repeated_serie() -> impl FnMut() -> usize {
-    let mut i = 1;
-    let mut count: usize = 0;
-    move || {
-        let result = i;
-        count += 1;
-        if count == 2 {
-            count = 0;
-            i += 1;
-        }
-        result
-    }
+// There must be a mathy way to do this, but i sure am too dumb for that.
+// So brute force it is ! weeee...
+
+/// produces an iterator that successively returns 1, 1, 2, 2, 3, 3, 4, 4, 5, 5 ...
+fn repeated_naturals() -> impl Iterator<Item = usize> {
+    (1usize..).map(|i| std::iter::repeat(i).take(2)).flatten()
 }
 
-/// produces a closure that successively returns 0, 1, 2, 2, 3, 3, 4, 4, 4, 5, 5, 5 ...
-fn index_serie() -> impl FnMut() -> usize {
-    let mut serie = repeated_serie();
-    let mut index = 0;
-    let mut count = serie();
-    move || {
-        if count <= 0 {
-            count = serie();
-            index += 1;
-        }
-        count -= 1;
-        index
-    }
+/// produces an iterator that successively returns 0, 1, 2, 2, 3, 3, 4, 4, 4, 5, 5, 5 ...
+fn indexes() -> impl Iterator<Item = usize> {
+    repeated_naturals()
+        .zip(0usize..)
+        .map(|(repeats, nat)| std::iter::repeat(nat).take(repeats))
+        .flatten()
 }
 
-fn add_vec((x, y): (i32, i32), (u, v): (i32, i32)) -> (i32, i32) {
-    (x + u, y + v)
+fn add_coords((x1, y1): Coord, (x2, y2): Coord) -> Coord {
+    (x1 + x2, y1 + y2)
 }
 
-fn square_coord(square_index: usize) -> (i32, i32) {
-    let mut index = index_serie();
+/// produces an iterator that will return the successive coordinates
+/// of our spiral (0,0), (1,0), (1,1), (0,1), (-1,1) ...
+fn coord_iter() -> impl Iterator<Item = Coord> {
     let mut coord = (0, 0);
-    let mut i = 1;
-    while i < square_index {
-        let vec = DIRS[index() % 4];
-        coord = add_vec(vec, coord);
-        i += 1;
-    }
-    coord
+    std::iter::once((0, 0)).chain(indexes().map(move |i| {
+        coord = add_coords(DIRS[i % 4], coord);
+        coord
+    }))
+}
+
+fn square_coord(square: usize) -> Coord {
+    // Knuth was wrong, 1 based addressing is the actual root of all evil
+    coord_iter().nth(square - 1).unwrap()
 }
 
 fn part1(square: usize) -> i32 {
@@ -64,36 +54,29 @@ fn part1(square: usize) -> i32 {
     coord.0.abs() + coord.1.abs()
 }
 
-fn coords_around((x, y): (i32, i32)) -> [(i32, i32); 8] {
-    let mut result = [(0, 0); 8];
-    let mut index = 0;
-    for i in -1..=1 {
-        for j in -1..=1 {
-            if !(i == 0 && j == 0) {
-                result[index] = (x + i, y + j);
-                index += 1;
-            }
-        }
-    }
-    result
+/// answers the age old question: what's around this coordinate ?
+fn coords_around(coord: Coord) -> impl Iterator<Item = Coord> {
+    (-1i32..=1)
+        .map(|x| (-1i32..=1).map(move |y| (x, y)))
+        .flatten()
+        .filter(|(x, y)| !(*x == 0 && *y == 0))
+        .map(move |c| add_coords(c, coord))
 }
 
 fn part2(input: i32) -> i32 {
-    let mut index = index_serie();
-    let mut coord = (0, 0);
     let mut hm = HashMap::new();
     hm.insert((0, 0), 1);
-    let mut total_around = 1;
-    while total_around < input {
-        let vec = DIRS[index() % 4];
-        coord = add_vec(vec, coord);
-        total_around = coords_around(coord)
-            .iter()
-            .map(|val| *hm.get(val).unwrap_or(&0))
+    // we just added the first iteration, so skip it
+    for coord in coord_iter().skip(1) {
+        let val = coords_around(coord)
+            .map(|val| *hm.get(&val).unwrap_or(&0))
             .sum();
-        hm.insert(coord, total_around);
+        hm.insert(coord, val);
+        if val > input {
+            return val;
+        }
     }
-    total_around
+    unreachable!()
 }
 
 #[cfg(test)]
@@ -101,29 +84,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_double_serie() {
-        let mut double_serie = repeated_serie();
-        assert_eq!(double_serie(), 1);
-        assert_eq!(double_serie(), 1);
-        assert_eq!(double_serie(), 2);
-        assert_eq!(double_serie(), 2);
+    fn test_repeated_naturals() {
+        let i = repeated_naturals();
+        let result = [1usize, 1, 2, 2, 3, 3, 4, 4, 5, 5];
+        for (i, r) in i.zip(result.into_iter()) {
+            assert_eq!(i, r);
+        }
     }
 
     #[test]
-    fn test_index() {
-        let mut index = index_serie();
-        assert_eq!(index(), 0);
-        assert_eq!(index(), 1);
-        assert_eq!(index(), 2);
-        assert_eq!(index(), 2);
-        assert_eq!(index(), 3);
-        assert_eq!(index(), 3);
-        assert_eq!(index(), 4);
-        assert_eq!(index(), 4);
-        assert_eq!(index(), 4);
-        assert_eq!(index(), 5);
-        assert_eq!(index(), 5);
-        assert_eq!(index(), 5);
+    fn test_indexes() {
+        let i = indexes();
+        let result = [0usize, 1, 2, 2, 3, 3, 4, 4, 4, 5, 5, 5];
+        for (i, r) in i.zip(result.into_iter()) {
+            assert_eq!(i, r);
+        }
     }
 
     #[test]
@@ -140,22 +115,5 @@ mod tests {
         assert_eq!(part1(12), 3);
         assert_eq!(part1(23), 2);
         assert_eq!(part1(1024), 31);
-    }
-
-    #[test]
-    fn test_coords_around() {
-        assert_eq!(
-            coords_around((0, 0)),
-            [
-                (-1, -1),
-                (-1, 0),
-                (-1, 1),
-                (0, -1),
-                (0, 1),
-                (1, -1),
-                (1, 0),
-                (1, 1)
-            ]
-        );
     }
 }
