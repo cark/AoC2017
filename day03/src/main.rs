@@ -45,7 +45,7 @@ fn coord_iter() -> impl Iterator<Item = Coord> {
 }
 
 fn square_coord(square: usize) -> Coord {
-    // Knuth was wrong, 1 based addressing is the actual root of all evil
+    // Knuth was wrong, the actual root of all evil is 1 based addressing
     coord_iter().nth(square - 1).unwrap()
 }
 
