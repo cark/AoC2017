@@ -1,57 +1,54 @@
 const INPUT: &str = include_str!("input.txt");
 
 fn main() {
-    let data = parse(INPUT);
-    println!("Part1 : {}", part1(&data));
-    println!("Part2 : {}", part2(&data));
+    let setup_time = std::time::Instant::now();
+    let part1 = part1(INPUT);
+    let part1_dur = setup_time.elapsed().as_micros();
+    let setup_time = std::time::Instant::now();
+    let part2 = part2(INPUT);
+    let part2_dur = setup_time.elapsed().as_micros();
+    println!("Part1 : {} in {} µs", part1, part1_dur);
+    println!("Part2 : {} in {} µs", part2, part2_dur);
 }
 
-fn parse(input: &str) -> Vec<Vec<i32>> {
-    input
-        .trim()
-        .lines()
-        .map(|line| {
-            line.split_whitespace()
-                .map(|s| s.parse::<i32>().unwrap())
-                .collect::<Vec<_>>()
+fn part1(input: &str) -> i32 {
+    solve(input, checksum)
+}
+
+fn part2(input: &str) -> i32 {
+    solve(input, evenly_divisible_checksum)
+}
+
+fn solve(input: &str, line_val: impl Fn(&str) -> i32) -> i32 {
+    input.trim().lines().map(line_val).sum()
+}
+
+fn checksum(line: &str) -> i32 {
+    let (min, max) = values(line).fold((i32::MAX, i32::MIN), |(min, max), value| {
+        (min.min(value), max.max(value))
+    });
+    max - min
+}
+
+fn values(line: &str) -> impl Iterator<Item = i32> + Clone + '_ {
+    line.split_whitespace().map(|s| s.parse::<i32>().unwrap())
+}
+
+fn evenly_divisible_checksum(line: &str) -> i32 {
+    let result = combinations(line).find(|(v1, v2)| v1 % v2 == 0).unwrap();
+    result.0 / result.1
+}
+
+fn combinations(line: &str) -> impl Iterator<Item = (i32, i32)> + '_ {
+    let vals = values(line).collect::<Vec<i32>>().into_iter();
+    vals.clone()
+        .enumerate()
+        .map(move |(i, value1)| {
+            vals.clone()
+                .enumerate()
+                .filter_map(move |(j, value2)| (i != j).then(|| (value1, value2)))
         })
-        .collect()
-}
-
-fn part1(input: &Vec<Vec<i32>>) -> i32 {
-    input
-        .iter()
-        .map(|v| {
-            let (min, max) = v.iter().fold((i32::MAX, i32::MIN), |(min, max), &val| {
-                (min.min(val), max.max(val))
-            });
-            max - min
-        })
-        .sum()
-}
-
-fn find_divisibles(v: &Vec<i32>) -> (i32, i32) {
-    for i in 0..v.len() {
-        for j in 0..v.len() {
-            if i == j {
-                continue;
-            }
-            if (v[i] % v[j]) == 0 {
-                return (v[i], v[j]);
-            }
-        }
-    }
-    unreachable!();
-}
-
-fn part2(input: &Vec<Vec<i32>>) -> i32 {
-    input
-        .iter()
-        .map(|v| {
-            let (a, b) = find_divisibles(v);
-            a / b
-        })
-        .sum()
+        .flatten()
 }
 
 #[cfg(test)]
@@ -63,11 +60,11 @@ mod tests {
 
     #[test]
     fn test_part1() {
-        assert_eq!(part1(&parse(TEST_INPUT)), 18);
+        assert_eq!(part1(TEST_INPUT), 18);
     }
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(&parse(TEST_INPUT2)), 9);
+        assert_eq!(part2(TEST_INPUT2), 9);
     }
 }
