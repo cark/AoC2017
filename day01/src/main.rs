@@ -20,7 +20,7 @@ fn part2(data: &str) -> u64 {
 }
 
 fn solve(data: &str, offset: usize) -> u64 {
-    let data = data.as_bytes();
+    let data = data.trim().as_bytes();
     data.iter()
         .enumerate()
         .filter_map(|(i, &value)| {
