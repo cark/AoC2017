@@ -21,13 +21,11 @@ fn part2(input: &str) -> i32 {
 }
 
 fn run(mut program: Vec<i32>, update_instruction: impl Fn(i32) -> i32) -> i32 {
-    let mut pi: i32 = 0;
+    let mut ip: i32 = 0;
     let mut instruction_count = 0;
-    while pi >= 0 && pi < program.len() as i32 {
-        let index = pi as usize;
-        let offset = program[index];
-        program[index] = update_instruction(program[index]);
-        pi = pi + offset;
+    while let Some(instruction) = program.get_mut(ip as usize) {
+        ip += *instruction;
+        *instruction = update_instruction(*instruction);
         instruction_count += 1;
     }
     instruction_count
