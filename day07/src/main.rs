@@ -4,35 +4,36 @@ const INPUT: &str = include_str!("input.txt");
 
 fn main() {
     let setup_time = std::time::Instant::now();
-    let part1 = part1(INPUT);
+    let tower = Tower::parse(INPUT);
+    let part1 = tower.root_name();
     let part1_dur = setup_time.elapsed().as_micros();
     println!("Part1 : {} in {} µs", part1, part1_dur);
 }
 
-fn part1(input: &'static str) -> &'static str {
+fn part1<'a>(input: &'a str) -> &'a str {
     Tower::parse(input).root_name()
 }
 
-struct Program {
-    name: &'static str,
+struct Program<'a> {
+    name: &'a str,
     weight: u64,
     parent: Option<usize>,
 }
 
-impl Program {
+impl Program<'_> {
     fn set_parent(&mut self, parent_id: usize) {
         self.parent = Some(parent_id);
     }
 }
 
 #[derive(Default)]
-struct Tower {
-    items: Vec<Program>,
-    name_to_index: HashMap<&'static str, usize>,
+struct Tower<'a> {
+    items: Vec<Program<'a>>,
+    name_to_index: HashMap<&'a str, usize>,
 }
 
-impl Tower {
-    fn id_by_name(&mut self, name: &'static str) -> usize {
+impl<'a> Tower<'a> {
+    fn id_by_name<'b>(&'b mut self, name: &'a str) -> usize {
         if let Some(&id) = self.name_to_index.get(name) {
             id
         } else {
@@ -47,13 +48,17 @@ impl Tower {
         }
     }
 
-    fn prog_mut(&mut self, prog_id: usize) -> &mut Program {
+    fn prog_mut<'b>(&'b mut self, prog_id: usize) -> &'b mut Program<'a> {
         self.items.get_mut(prog_id).unwrap()
     }
 
-    fn parse(input: &'static str) -> Tower {
-        let mut result = Self::default();
-        input.trim().lines().for_each(|line| {
+    fn parse<'b: 'a>(input: &'b str) -> Tower<'a> {
+        let mut result = Tower {
+            items: vec![],
+            name_to_index: HashMap::default(),
+        };
+        let mut lines = input.trim().lines();
+        while let Some(line) = lines.next() {
             let mut parts = line.split_whitespace();
             let prog_id = result.id_by_name(parts.next().unwrap());
             let prog = result.prog_mut(prog_id);
@@ -64,11 +69,11 @@ impl Tower {
                 let id = result.id_by_name(&s[..s.len() - 1]);
                 result.prog_mut(id).set_parent(prog_id);
             }
-        });
+        }
         result
     }
 
-    fn root_name(&self) -> &'static str {
+    fn root_name(&'a self) -> &'a str {
         self.items[self.root_index()].name
     }
 
