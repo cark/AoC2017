@@ -56,14 +56,12 @@ impl Tower {
         input.trim().lines().for_each(|line| {
             let mut parts = line.split_whitespace();
             let prog_id = result.id_by_name(parts.next().unwrap());
-            //println!("{line} {prog_id}");
             let prog = result.prog_mut(prog_id);
             let weight = parts.next().unwrap();
             prog.weight = weight[1..weight.len() - 1].parse().unwrap();
             let mut parts = parts.skip(1);
             while let Some(s) = parts.next() {
                 let id = result.id_by_name(&s[..s.len() - 1]);
-                //println!("    {s} {id} -> {prog_id}");
                 result.prog_mut(id).set_parent(prog_id);
             }
         });
@@ -71,11 +69,15 @@ impl Tower {
     }
 
     fn root_name(&self) -> &'static str {
-        let mut current = &self.items[0];
-        while let Some(parent_id) = current.parent {
-            current = &self.items[parent_id]
+        self.items[self.root_index()].name
+    }
+
+    fn root_index(&self) -> usize {
+        let mut current = 0;
+        while let Some(parent_id) = self.items[current].parent {
+            current = parent_id
         }
-        current.name
+        current
     }
 }
 
