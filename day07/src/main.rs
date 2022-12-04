@@ -4,7 +4,7 @@ const INPUT: &str = include_str!("input.txt");
 
 fn main() {
     let setup_time = std::time::Instant::now();
-    let tower = Tower::parse(INPUT);
+    //let tower = Tower::parse(INPUT);
     let part1 = part1(INPUT);
     let part1_dur = setup_time.elapsed().as_micros();
     println!("Part1 : {} in {} µs", part1, part1_dur);
@@ -78,7 +78,7 @@ impl<'a> Tower<'a> {
         result
     }
 
-    fn part1<'b: 'a>(this: &'a Tower<'b>) -> &'b str {
+    fn part1<'b>(this: &Tower<'b>) -> &'b str {
         this.items[this.root_index()].name
     }
 
