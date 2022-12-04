@@ -5,14 +5,19 @@ const INPUT: &str = include_str!("input.txt");
 fn main() {
     let setup_time = std::time::Instant::now();
     let tower = Tower::parse(INPUT);
-    let part1 = tower.root_name();
+    let part1 = part1(INPUT);
     let part1_dur = setup_time.elapsed().as_micros();
     println!("Part1 : {} in {} µs", part1, part1_dur);
 }
 
-fn part1<'a>(input: &'a str) -> &'a str {
-    Tower::parse(input).root_name()
+fn part1(input: &str) -> &str {
+    let tower = Tower::parse(input);
+    Tower::part1(&tower)
 }
+// fn part1<'a, 'b: 'a>(input: &'b str) -> &'b str {
+//     let tower = Tower::parse(input);
+//     Tower::part1(&tower)
+// }
 
 struct Program<'a> {
     name: &'a str,
@@ -52,7 +57,7 @@ impl<'a> Tower<'a> {
         self.items.get_mut(prog_id).unwrap()
     }
 
-    fn parse<'b: 'a>(input: &'b str) -> Tower<'a> {
+    fn parse<'b: 'a>(input: &'a str) -> Tower<'a> {
         let mut result = Tower {
             items: vec![],
             name_to_index: HashMap::default(),
@@ -73,8 +78,8 @@ impl<'a> Tower<'a> {
         result
     }
 
-    fn root_name(&'a self) -> &'a str {
-        self.items[self.root_index()].name
+    fn part1<'b: 'a>(this: &'a Tower<'b>) -> &'b str {
+        this.items[this.root_index()].name
     }
 
     fn root_index(&self) -> usize {
