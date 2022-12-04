@@ -4,30 +4,28 @@ const INPUT: &str = include_str!("input.txt");
 
 fn main() {
     let setup_time = std::time::Instant::now();
-    //let tower = Tower::parse(INPUT);
     let part1 = part1(INPUT);
     let part1_dur = setup_time.elapsed().as_micros();
     println!("Part1 : {} in {} µs", part1, part1_dur);
 }
 
 fn part1(input: &str) -> &str {
-    let tower = Tower::parse(input);
-    Tower::part1(&tower)
+    Tower::part1(&Tower::parse(input))
 }
-// fn part1<'a, 'b: 'a>(input: &'b str) -> &'b str {
-//     let tower = Tower::parse(input);
-//     Tower::part1(&tower)
-// }
 
 struct Program<'a> {
     name: &'a str,
     weight: u64,
     parent: Option<usize>,
+    children: Vec<usize>,
 }
 
 impl Program<'_> {
     fn set_parent(&mut self, parent_id: usize) {
         self.parent = Some(parent_id);
+    }
+    fn add_child(&mut self, child_id: usize) {
+        self.children.push(child_id);
     }
 }
 
@@ -48,6 +46,7 @@ impl<'a> Tower<'a> {
                 name,
                 parent: None,
                 weight: 0,
+                children: vec![],
             });
             result
         }
@@ -57,7 +56,7 @@ impl<'a> Tower<'a> {
         self.items.get_mut(prog_id).unwrap()
     }
 
-    fn parse<'b: 'a>(input: &'a str) -> Tower<'a> {
+    fn parse(input: &'a str) -> Tower<'a> {
         let mut result = Tower {
             items: vec![],
             name_to_index: HashMap::default(),
@@ -71,8 +70,9 @@ impl<'a> Tower<'a> {
             prog.weight = weight[1..weight.len() - 1].parse().unwrap();
             let mut parts = parts.skip(1);
             while let Some(s) = parts.next() {
-                let id = result.id_by_name(&s[..s.len() - 1]);
-                result.prog_mut(id).set_parent(prog_id);
+                let child_id = result.id_by_name(&s[..s.len() - 1]);
+                result.prog_mut(child_id).set_parent(prog_id);
+                result.prog_mut(prog_id).add_child(child_id)
             }
         }
         result
@@ -99,18 +99,13 @@ mod tests {
 
     #[test]
     fn test_parse() {
-        assert_eq!(Tower::parse(TEST_INPUT).root_name(), "tknk");
+        assert_eq!(part1(TEST_INPUT), "tknk");
+        assert_eq!(part1(INPUT), "cqmvs");
     }
 
-    // #[test]
-    // fn test_part1() {
-    //     assert_eq!(part1(TEST_INPUT), 2);
-    //     assert_eq!(part1(INPUT), 441);
-    // }
-
-    // #[test]
-    // fn test_part2() {
-    //     assert_eq!(part2(TEST_INPUT), 4);
-    //     assert_eq!(part2(INPUT), 861);
-    // }
+    #[test]
+    fn test_part2() {
+        // assert_eq!(part2(TEST_INPUT), 60);
+        // assert_eq!(part2(INPUT), 861);
+    }
 }
