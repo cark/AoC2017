@@ -63,7 +63,6 @@ fn distribute(banks: &mut [u8], mut index: usize) {
     let len = banks.len();
     let current = banks.get_mut(index).unwrap();
     let mut remaining = *current;
-    //let inc_each_by = remaining / len;
     *current = 0;
     index += 1;
     while remaining > 0 {
