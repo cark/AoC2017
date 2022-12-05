@@ -52,118 +52,45 @@ impl<'a> Registers<'a> {
     }
 }
 
-struct Instruction {
-    kind: InstructionKind,
-    register: RegisterIndex,
-    amount: i64,
-    condition: Condition,
-}
+fn parse_and_exec_instruction<'a>(line: &'a str, mut registers: Registers<'a>) -> Registers<'a> {
+    let mut parts = line.trim().split(" if ");
 
-enum InstructionKind {
-    Inc,
-    Dec,
-}
-
-impl Instruction {
-    fn parse<'a>(line: &'a str, mut registers: Registers<'a>) -> (Self, Registers<'a>) {
-        use InstructionKind::*;
-        let mut parts = line.trim().split(" if ");
-
-        let mut tokens = parts.next().unwrap().split_whitespace();
-        let register = registers.register_id(tokens.next().unwrap());
-        let kind = match tokens.next().unwrap() {
-            "inc" => Inc,
-            "dec" => Dec,
+    let mut tokens = parts.next().unwrap().split_whitespace();
+    let register = registers.register_id(tokens.next().unwrap());
+    let op = tokens.next().unwrap();
+    let amount = tokens.next().unwrap().parse::<i64>().unwrap();
+    let (result, mut registers) = parse_and_check_condition(parts.next().unwrap(), registers);
+    if result {
+        match op {
+            "inc" => registers.set_value(register, registers.value(register) + amount),
+            "dec" => registers.set_value(register, registers.value(register) - amount),
             _ => unreachable!(),
         };
-        let amount = tokens.next().unwrap().parse::<i64>().unwrap();
-        let (condition, registers) = Condition::parse(parts.next().unwrap(), registers);
-
-        (
-            Instruction {
-                kind,
-                register,
-                amount,
-                condition,
-            },
-            registers,
-        )
     }
-
-    fn exec<'a, 'b>(&'a self, mut registers: Registers<'b>) -> Registers<'b> {
-        use InstructionKind::*;
-        if self.condition.check(&registers) {
-            match self.kind {
-                Inc => {
-                    registers
-                        .set_value(self.register, registers.value(self.register) + self.amount);
-                }
-                Dec => {
-                    registers
-                        .set_value(self.register, registers.value(self.register) - self.amount);
-                }
-            }
-            registers
-        } else {
-            registers
-        }
-    }
+    registers
 }
 
-struct Condition {
-    kind: ConditionKind,
-    register: RegisterIndex,
-    amount: i64,
-}
-
-enum ConditionKind {
-    Greater,
-    Smaller,
-    GreaterOrEqual,
-    SmallerOrEqual,
-    Equal,
-    NotEqual,
-}
-
-impl Condition {
-    fn parse<'a>(line: &'a str, mut registers: Registers<'a>) -> (Self, Registers<'a>) {
-        use ConditionKind::*;
-
-        let mut tokens = line.trim().split_whitespace();
-        let register = registers.register_id(tokens.next().unwrap());
-        let kind = match tokens.next().unwrap() {
-            "<" => Smaller,
-            ">" => Greater,
-            "<=" => SmallerOrEqual,
-            ">=" => GreaterOrEqual,
-            "==" => Equal,
-            "!=" => NotEqual,
+fn parse_and_check_condition<'a>(
+    line: &'a str,
+    mut registers: Registers<'a>,
+) -> (bool, Registers<'a>) {
+    let mut tokens = line.trim().split_whitespace();
+    let register_id = registers.register_id(tokens.next().unwrap());
+    let register = registers.value(register_id);
+    let op = tokens.next().unwrap();
+    let amount = tokens.next().unwrap().parse::<i64>().unwrap();
+    (
+        match op {
+            "<" => register < amount,
+            ">" => register > amount,
+            "<=" => register <= amount,
+            ">=" => register >= amount,
+            "==" => register == amount,
+            "!=" => register != amount,
             _ => unreachable!(),
-        };
-        let amount = tokens.next().unwrap().parse::<i64>().unwrap();
-        (
-            Condition {
-                amount,
-                kind,
-                register,
-            },
-            registers,
-        )
-    }
-
-    fn check(&self, registers: &Registers) -> bool {
-        use ConditionKind::*;
-
-        let reg = registers.value(self.register);
-        match self.kind {
-            Greater => reg > self.amount,
-            Smaller => reg < self.amount,
-            GreaterOrEqual => reg >= self.amount,
-            SmallerOrEqual => reg <= self.amount,
-            Equal => reg == self.amount,
-            NotEqual => reg != self.amount,
-        }
-    }
+        },
+        registers,
+    )
 }
 
 fn solve(input: &str) -> (i64, i64) {
@@ -171,8 +98,7 @@ fn solve(input: &str) -> (i64, i64) {
         .trim()
         .lines()
         .fold(Registers::default(), |registers, line| {
-            let (instruction, registers) = Instruction::parse(line, registers);
-            instruction.exec(registers)
+            parse_and_exec_instruction(line, registers)
         });
     (
         registers.items.into_iter().max().unwrap(),
