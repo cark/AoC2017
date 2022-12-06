@@ -17,21 +17,21 @@ fn main() {
 }
 
 fn part1<const C: usize>(input: &str) -> u32 {
-    HashState::<C>::new(input).solve::<1, TextDecoder, WeakHash>()
+    ElvenHasher::<C>::new(input).solve::<1, TextDecoder, WeakHash>()
 }
 
 fn part2<const C: usize>(input: &str) -> String {
-    HashState::<C>::new(input).solve::<64, AsciiDecoder, DenseHash>()
+    ElvenHasher::<C>::new(input).solve::<64, AsciiDecoder, DenseHash>()
 }
 
-struct HashState<'a, const C: usize> {
+struct ElvenHasher<'a, const C: usize> {
     input: &'a str,
     skip_size: usize,
     position: usize,
     list: [u8; C],
 }
 
-impl<'a, const C: usize> HashState<'a, C> {
+impl<'a, const C: usize> ElvenHasher<'a, C> {
     fn new(input: &'a str) -> Self {
         let mut list = [0; C];
         for (i, item) in list.iter_mut().enumerate() {
