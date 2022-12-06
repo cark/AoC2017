@@ -43,8 +43,8 @@ impl<const C: usize> KnotHasher<C> {
         }
     }
 
-    fn sparse_hash<I: Iterator<Item = usize>>(&mut self, lengths: I) {
-        for length in lengths {
+    fn sparse_hash(&mut self, lengths: &Vec<usize>) {
+        for &length in lengths {
             reverse_circular(&mut self.list, self.position, length);
             self.position += length + self.skip_size;
             self.skip_size += 1;
@@ -56,9 +56,9 @@ impl<const C: usize> KnotHasher<C> {
         Decoder: LengthDecoder,
         Hasher: Hash,
     {
+        let lengths = Decoder::decode(input);
         for _ in 0..ITERATIONS {
-            let lengths = Decoder::decode(input);
-            self.sparse_hash(lengths);
+            self.sparse_hash(&lengths);
         }
         Hasher::hash(&self.list)
     }
@@ -97,26 +97,25 @@ impl Hash for WeakHash {
 }
 
 trait LengthDecoder {
-    fn decode(input: &str) -> Box<dyn Iterator<Item = usize> + '_>;
+    fn decode(input: &str) -> Vec<usize>;
 }
 
 struct TextDecoder;
 impl LengthDecoder for TextDecoder {
-    fn decode(input: &str) -> Box<dyn Iterator<Item = usize> + '_> {
-        Box::new(input.split(',').map(|s| s.parse().unwrap()))
+    fn decode(input: &str) -> Vec<usize> {
+        input.split(',').map(|s| s.parse().unwrap()).collect()
     }
 }
 
 struct AsciiDecoder;
 impl LengthDecoder for AsciiDecoder {
-    fn decode(input: &str) -> Box<dyn Iterator<Item = usize> + '_> {
-        Box::new(
-            input
-                .as_bytes()
-                .iter()
-                .map(|&b| b as usize)
-                .chain(ADD_TO_END.into_iter()),
-        )
+    fn decode(input: &str) -> Vec<usize> {
+        input
+            .as_bytes()
+            .iter()
+            .map(|&b| b as usize)
+            .chain(ADD_TO_END.into_iter())
+            .collect()
     }
 }
 
@@ -128,12 +127,9 @@ mod tests {
 
     #[test]
     fn test_parse_lengths() {
+        assert_eq!(TextDecoder::decode(TEST_INPUT), [3, 4, 1, 5]);
         assert_eq!(
-            TextDecoder::decode(TEST_INPUT).collect::<Vec<usize>>(),
-            [3, 4, 1, 5]
-        );
-        assert_eq!(
-            AsciiDecoder::decode("1,2,3").collect::<Vec<usize>>(),
+            AsciiDecoder::decode("1,2,3"),
             [49, 44, 50, 44, 51, 17, 31, 73, 47, 23]
         )
     }
