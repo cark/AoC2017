@@ -17,28 +17,26 @@ fn main() {
 }
 
 fn part1<const C: usize>(input: &str) -> u32 {
-    ElvenHasher::<C>::new(input).solve::<1, TextDecoder, WeakHash>()
+    KnotHasher::<C>::new().solve::<TextDecoder, 1, WeakHash>(input)
 }
 
 fn part2<const C: usize>(input: &str) -> String {
-    ElvenHasher::<C>::new(input).solve::<64, AsciiDecoder, DenseHash>()
+    KnotHasher::<C>::new().solve::<AsciiDecoder, 64, DenseHash>(input)
 }
 
-struct ElvenHasher<'a, const C: usize> {
-    input: &'a str,
+struct KnotHasher<const C: usize> {
     skip_size: usize,
     position: usize,
     list: [u8; C],
 }
 
-impl<'a, const C: usize> ElvenHasher<'a, C> {
-    fn new(input: &'a str) -> Self {
+impl<const C: usize> KnotHasher<C> {
+    fn new() -> Self {
         let mut list = [0; C];
         for (i, item) in list.iter_mut().enumerate() {
             *item = i as u8;
         }
         Self {
-            input,
             skip_size: 0,
             position: 0,
             list,
@@ -47,27 +45,28 @@ impl<'a, const C: usize> ElvenHasher<'a, C> {
 
     fn sparse_hash<I: Iterator<Item = usize>>(&mut self, lengths: I) {
         for length in lengths {
-            for i in 0..(length / 2) {
-                self.list.swap(
-                    (self.position + i) % C,
-                    (self.position + length - i - 1) % C,
-                );
-            }
+            reverse_circular(&mut self.list, self.position, length);
             self.position += length + self.skip_size;
             self.skip_size += 1;
         }
     }
 
-    fn solve<const REPEATS: u8, Decoder, H>(&mut self) -> H::Output
+    fn solve<Decoder, const ITERATIONS: u8, Hasher>(&mut self, input: &str) -> Hasher::Output
     where
         Decoder: LengthDecoder,
-        H: Hash,
+        Hasher: Hash,
     {
-        for _ in 0..REPEATS {
-            let lengths = Decoder::decode(self.input);
+        for _ in 0..ITERATIONS {
+            let lengths = Decoder::decode(input);
             self.sparse_hash(lengths);
         }
-        H::hash(&self.list)
+        Hasher::hash(&self.list)
+    }
+}
+
+fn reverse_circular<const C: usize>(list: &mut [u8; C], position: usize, length: usize) {
+    for i in 0..(length / 2) {
+        list.swap((position + i) % C, (position + length - i - 1) % C);
     }
 }
 
@@ -77,20 +76,19 @@ trait Hash {
 }
 
 struct DenseHash;
-
 impl Hash for DenseHash {
     type Output = String;
     fn hash(list: &[u8]) -> Self::Output {
-        let mut result = String::with_capacity(16 * 2);
         list.chunks(16)
-            .map(|block| block.into_iter().fold(0, |result, &c| result.bitxor(c)))
-            .for_each(|c| write!(result, "{c:02x}").unwrap());
-        result
+            .map(|block| block.into_iter().fold(0, BitXor::bitxor))
+            .fold(String::with_capacity(16 * 2), |mut result, c| {
+                write!(result, "{c:02x}").unwrap();
+                result
+            })
     }
 }
 
 struct WeakHash;
-
 impl Hash for WeakHash {
     type Output = u32;
     fn hash(list: &[u8]) -> Self::Output {
@@ -99,21 +97,19 @@ impl Hash for WeakHash {
 }
 
 trait LengthDecoder {
-    fn decode<'a>(input: &'a str) -> Box<dyn Iterator<Item = usize> + 'a>;
+    fn decode(input: &str) -> Box<dyn Iterator<Item = usize> + '_>;
 }
 
 struct TextDecoder;
-
 impl LengthDecoder for TextDecoder {
-    fn decode<'a>(input: &'a str) -> Box<dyn Iterator<Item = usize> + 'a> {
+    fn decode(input: &str) -> Box<dyn Iterator<Item = usize> + '_> {
         Box::new(input.split(',').map(|s| s.parse().unwrap()))
     }
 }
 
 struct AsciiDecoder;
-
 impl LengthDecoder for AsciiDecoder {
-    fn decode<'a>(input: &'a str) -> Box<dyn Iterator<Item = usize> + 'a> {
+    fn decode(input: &str) -> Box<dyn Iterator<Item = usize> + '_> {
         Box::new(
             input
                 .as_bytes()
